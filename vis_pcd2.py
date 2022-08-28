@@ -35,21 +35,21 @@ if __name__ == '__main__':
     # camera_translate=np.array([[0,0,1000]]).T
     camera_pose=np.hstack([camera_rotate,camera_translate])
     camera_pose=np.vstack([camera_pose,[0,0,0,1]])
-    camera = pyrender.PerspectiveCamera(yfov=np.pi / 2.0, aspectRatio=None)
+    camera = pyrender.PerspectiveCamera(yfov=np.pi / 2.0, aspectRatio=None,zfar=10000000)
     print(camera.get_projection_matrix(width=1920,height=1080))
-    # camera = pyrender.camera.IntrinsicsCamera(
-    #    fx=240, fy =240,
-    #    cx=240, cy=240
-    # )
+    camera = pyrender.camera.IntrinsicsCamera(
+       fx=1920/2, fy =1920/2,
+       cx=1920/2, cy=1080/2,zfar=1000000000000000000000000000000000
+    )
     camera_pose = np.eye(4)
     # camera_pose = RT
     camera_pose[1, :] = - camera_pose[1, :]
     camera_pose[2, :] = - camera_pose[2, :]
     # camera_pose[2,3]=9300
-    # camera = pyrender.camera.IntrinsicsCamera(
-    #    fx=1.08137000e+03, fy=1.08137000e+03,
-    #    cx=9.59500000e+02, cy=5.39500000e+02
-    # )
+    camera = pyrender.camera.IntrinsicsCamera(
+       fx=1.08137000e+03, fy=1.08137000e+03,
+       cx=9.59500000e+02, cy=5.39500000e+02,zfar=10e20
+    )
 
     scene.add(camera, pose=camera_pose)
 
