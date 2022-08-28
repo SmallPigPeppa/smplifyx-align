@@ -21,9 +21,9 @@ pcd_pose = np.vstack([pcd_pose, [0, 0, 0, 1]])
 if __name__ == '__main__':
     file_i=f'out0001-pcd.ply'
     pcd = o3d.io.read_point_cloud(file_i)
-    R = pcd.get_rotation_matrix_from_xyz((np.pi*1.0, 0, 0))
-    # pcd_center=np.mean(np.array(pcd.points),axis=0)
-    pcd.rotate(R, center=pcd_center)
+    # R = pcd.get_rotation_matrix_from_xyz((np.pi*1.0, 0, 0))
+    # # pcd_center=np.mean(np.array(pcd.points),axis=0)
+    # pcd.rotate(R, center=pcd_center)
     print(np.array(pcd.points).shape)
     print(np.array(pcd.colors).shape)
     mesh = pyrender.Mesh.from_points(points=np.array(pcd.points), colors=np.array(pcd.colors), poses=pcd_pose)
@@ -36,22 +36,26 @@ if __name__ == '__main__':
     camera_pose=np.hstack([camera_rotate,camera_translate])
     camera_pose=np.vstack([camera_pose,[0,0,0,1]])
     camera = pyrender.PerspectiveCamera(yfov=np.pi / 2.0, aspectRatio=None)
-
+    print(camera.get_projection_matrix(width=1920,height=1080))
+    # camera = pyrender.camera.IntrinsicsCamera(
+    #    fx=240, fy =240,
+    #    cx=240, cy=240
+    # )
     camera_pose = np.eye(4)
     # camera_pose = RT
     camera_pose[1, :] = - camera_pose[1, :]
     camera_pose[2, :] = - camera_pose[2, :]
-    camera_pose[3,3]=9300
-    camera = pyrender.camera.IntrinsicsCamera(
-       fx=1.08137000e+03, fy=1.08137000e+03,
-       cx=9.59500000e+02, cy=5.39500000e+02
-    )
+    # camera_pose[2,3]=9300
+    # camera = pyrender.camera.IntrinsicsCamera(
+    #    fx=1.08137000e+03, fy=1.08137000e+03,
+    #    cx=9.59500000e+02, cy=5.39500000e+02
+    # )
 
     scene.add(camera, pose=camera_pose)
 
     pyrender.Viewer(scene)
-    # 480
-    r = pyrender.OffscreenRenderer(480, 480)
+    # 480,
+    r = pyrender.OffscreenRenderer(1920, 1080)
     color, depth = r.render(scene)
 
 
