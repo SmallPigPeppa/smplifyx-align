@@ -84,6 +84,13 @@ def get_scene_render(body_mesh: pyrender.Mesh,
     scene = pyrender.Scene(bg_color=[0.0, 0.0, 0.0, 0.0],
                            ambient_light=(0.3, 0.3, 0.3))
     scene.add(body_mesh, 'mesh')
+
+    import open3d as o3d
+    pcd = o3d.io.read_point_cloud('out0001-pcd.ply')
+    mesh_pcd = pyrender.Mesh.from_points(points=np.array(pcd.points), colors=np.array(pcd.colors), poses=pcd_pose)
+    scene.add(mesh_pcd,'mesh-pcd')
+
+
     light_nodes = _create_raymond_lights()
     for node in light_nodes:
        scene.add_node(node)
@@ -118,7 +125,7 @@ def get_scene_render(body_mesh: pyrender.Mesh,
     )
     camera = pyrender.camera.IntrinsicsCamera(
        fx=1.08137000e+03, fy=1.08137000e+03,
-       cx=9.59500000e+02, cy=5.39500000e+02
+       cx=9.59500000e+02, cy=5.39500000e+02,zfar=10e20
     )
     scene.add(camera, pose=camera_pose)
     pyrender.Viewer(scene)
