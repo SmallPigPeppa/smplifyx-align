@@ -87,6 +87,11 @@ def get_scene_render(body_mesh: pyrender.Mesh,
 
     import open3d as o3d
     pcd = o3d.io.read_point_cloud('out0001-pcd.ply')
+    pcd_translate = np.array([[0, 0, 0]]).T
+    # camera_translate=np.array([[0,0,1000]]).T
+    pcd_rotate = pcd.get_rotation_matrix_from_xyz((0, 0, 0))
+    pcd_pose = np.hstack([pcd_rotate, pcd_translate])
+    pcd_pose = np.vstack([pcd_pose, [0, 0, 0, 1]])
     mesh_pcd = pyrender.Mesh.from_points(points=np.array(pcd.points), colors=np.array(pcd.colors), poses=pcd_pose)
     scene.add(mesh_pcd,'mesh-pcd')
 
