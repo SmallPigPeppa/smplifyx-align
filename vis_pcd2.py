@@ -37,14 +37,15 @@ if __name__ == '__main__':
     camera_pose=np.vstack([camera_pose,[0,0,0,1]])
     camera = pyrender.PerspectiveCamera(yfov=np.pi / 2.0, aspectRatio=None)
 
-    # camera_pose = np.eye(4)
-    # # camera_pose = RT
-    # camera_pose[1, :] = - camera_pose[1, :]
-    # camera_pose[2, :] = - camera_pose[2, :]
-    # camera = pyrender.camera.IntrinsicsCamera(
-    #    fx=1.08137000e+03, fy=1.08137000e+03,
-    #    cx=9.59500000e+02, cy=5.39500000e+02
-    # )
+    camera_pose = np.eye(4)
+    # camera_pose = RT
+    camera_pose[1, :] = - camera_pose[1, :]
+    camera_pose[2, :] = - camera_pose[2, :]
+    camera_pose[3,3]=9300
+    camera = pyrender.camera.IntrinsicsCamera(
+       fx=1.08137000e+03, fy=1.08137000e+03,
+       cx=9.59500000e+02, cy=5.39500000e+02
+    )
 
     scene.add(camera, pose=camera_pose)
 
