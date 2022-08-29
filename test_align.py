@@ -75,9 +75,6 @@ def load_mesh(mesh_location: str) -> pyrender.Mesh:
 def get_scene_render(body_mesh: pyrender.Mesh,
                      image_width: int,
                      image_height: int,
-                     camera_center: np.ndarray, 
-                     camera_translation: np.ndarray,
-                     camera_focal_length: float = 5000,
                     ) -> Tuple[np.ndarray, np.ndarray]:
     """Renders the scene and returns the color and depth output"""
 
@@ -92,7 +89,10 @@ def get_scene_render(body_mesh: pyrender.Mesh,
     pcd_rotate = pcd.get_rotation_matrix_from_xyz((0, 0, 0))
     pcd_pose = np.hstack([pcd_rotate, pcd_translate])
     pcd_pose = np.vstack([pcd_pose, [0, 0, 0, 1]])
-    mesh_pcd = pyrender.Mesh.from_points(points=np.array(pcd.points), colors=np.array(pcd.colors), poses=pcd_pose)
+    tmp_points=np.array(pcd.points)
+    # tmp_points[:,2]*=0.5
+    tmp_points *= 0.00063
+    mesh_pcd = pyrender.Mesh.from_points(points=tmp_points, colors=np.array(pcd.colors), poses=pcd_pose)
     scene.add(mesh_pcd,'mesh-pcd')
 
 
@@ -124,10 +124,10 @@ def get_scene_render(body_mesh: pyrender.Mesh,
     center = torch.tensor([[intrinsics_mat[2], intrinsics_mat[5]]], dtype=dtype)
     '''
 
-    camera = pyrender.camera.IntrinsicsCamera(
-       fx=camera_focal_length, fy=camera_focal_length, 
-       cx=camera_center[0], cy=camera_center[1]
-    )
+    # camera = pyrender.camera.IntrinsicsCamera(
+    #    fx=camera_focal_length, fy=camera_focal_length,
+    #    cx=camera_center[0], cy=camera_center[1]
+    # )
     camera = pyrender.camera.IntrinsicsCamera(
        fx=1.08137000e+03, fy=1.08137000e+03,
        cx=9.59500000e+02, cy=5.39500000e+02,zfar=10e20
@@ -223,21 +223,18 @@ def main(args):
         for person in persons_meshes:
 
             person_id = os.path.splitext(person)[0]
-            result = read_pickle_file(os.path.join(result_pickle_folder, image_name, person_id+'.pkl'))
+            print(os.path.join(result_pickle_folder, image_name, person_id+'.pkl'))
+            # result = read_pickle_file(os.path.join(result_pickle_folder, image_name, person_id+'.pkl'))
             # print(result)
-            result2=read_pickle_file("000_all.pkl")
-            print(result2)
-            body_mesh = load_mesh(os.path.join(mesh_folder, image_name, person))
+            # result2=read_pickle_file("000_all.pkl")
+            # print(result2)
+            # body_mesh = load_mesh(os.path.join(mesh_folder, image_name, person))
             body_mesh = load_mesh("000.obj_cam_CS.obj")
 
             scene_rgba, _ = get_scene_render(
                 body_mesh,
                 img.size[0],
                 img.size[1],
-                # result['camera_center'],
-                # [img.size[1]/2,img.size[0]/2],#1920,1080
-                [img.size[0]/2,img.size[1]/2],
-                result['camera_translation'].squeeze()
             )
             renders_to_combine.append(scene_rgba)
             overlayed = combine_scene_image(scene_rgba, img)
