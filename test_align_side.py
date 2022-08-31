@@ -15,7 +15,9 @@ from tqdm import tqdm
 import shutil
 import open3d as o3d
 from PIL import Image
-
+os.environ['PYOPENGL_PLATFORM'] = 'egl'
+os.environ['EGL_DEVICE_ID'] = os.environ['GPU_DEVICE_ORDINAL'].split(',')[0] \
+    if 'GPU_DEVICE_ORDINAL' in os.environ.keys() else '0'
 try:
     import cPickle as pickle
 except ImportError:
