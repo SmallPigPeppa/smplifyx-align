@@ -13,6 +13,7 @@ from pyrender import Node, DirectionalLight
 from typing import Tuple, Union, List
 from tqdm import tqdm
 import shutil
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -40,7 +41,7 @@ def _create_raymond_lights():
         y = np.cross(z, x)
 
         matrix = np.eye(4)
-        matrix[:3,:3] = np.c_[x,y,z]
+        matrix[:3, :3] = np.c_[x, y, z]
         nodes.append(Node(
             light=DirectionalLight(color=np.ones(3), intensity=1.0),
             matrix=matrix
@@ -60,10 +61,10 @@ def load_mesh(mesh_location: str) -> pyrender.Mesh:
     """Loads a mesh with applied material from the specified file."""
 
     material = pyrender.MetallicRoughnessMaterial(
-            metallicFactor=0.0,
-            alphaMode='OPAQUE',
-            baseColorFactor=(1.0, 1.0, 0.9, 1.0)
-        )
+        metallicFactor=0.0,
+        alphaMode='OPAQUE',
+        baseColorFactor=(1.0, 1.0, 0.9, 1.0)
+    )
     body_mesh = trimesh.load(mesh_location)
     mesh = pyrender.Mesh.from_trimesh(
         body_mesh,
@@ -75,7 +76,7 @@ def load_mesh(mesh_location: str) -> pyrender.Mesh:
 def get_scene_render(body_mesh: pyrender.Mesh,
                      image_width: int,
                      image_height: int,
-                    ) -> Tuple[np.ndarray, np.ndarray]:
+                     ) -> Tuple[np.ndarray, np.ndarray]:
     """Renders the scene and returns the color and depth output"""
 
     scene = pyrender.Scene(bg_color=[0.0, 0.0, 0.0, 0.0],
@@ -89,16 +90,15 @@ def get_scene_render(body_mesh: pyrender.Mesh,
     pcd_rotate = pcd.get_rotation_matrix_from_xyz((0, 0, 0))
     pcd_pose = np.hstack([pcd_rotate, pcd_translate])
     pcd_pose = np.vstack([pcd_pose, [0, 0, 0, 1]])
-    tmp_points=np.array(pcd.points)
+    tmp_points = np.array(pcd.points)
     # tmp_points[:,2]*=0.5
     tmp_points *= 0.00063
     mesh_pcd = pyrender.Mesh.from_points(points=tmp_points, colors=np.array(pcd.colors), poses=pcd_pose)
-    scene.add(mesh_pcd,'mesh-pcd')
-
+    scene.add(mesh_pcd, 'mesh-pcd')
 
     light_nodes = _create_raymond_lights()
     for node in light_nodes:
-       scene.add_node(node)
+        scene.add_node(node)
     pyrender.Viewer(scene)
     # camera_translation[0] *= -1.0
     # camera_pose = np.eye(4)
@@ -129,15 +129,14 @@ def get_scene_render(body_mesh: pyrender.Mesh,
     #    cx=camera_center[0], cy=camera_center[1]
     # )
     camera = pyrender.camera.IntrinsicsCamera(
-       fx=1.08137000e+03, fy=1.08137000e+03,
-       cx=9.59500000e+02, cy=5.39500000e+02,zfar=10e20
+        fx=1.08137000e+03, fy=1.08137000e+03,
+        cx=9.59500000e+02, cy=5.39500000e+02, zfar=10e20
     )
     scene.add(camera, pose=camera_pose)
     pyrender.Viewer(scene)
     light_nodes = _create_raymond_lights()
     for node in light_nodes:
-       scene.add_node(node)
-
+        scene.add_node(node)
 
     # light = pyrender.DirectionalLight(color=np.ones(3), intensity=10.0)
     # scene.add(light, pose=camera_pose)
@@ -181,7 +180,7 @@ def combine_scene_image(scene_rgba: Union[np.ndarray, List[np.ndarray]],
         # for now: prevent overflow when bodies overlap by clipping. Later: only show the one in front using depth map
         output_image = np.clip(np.sum(bodies, axis=0), 0, 1) + (1 - body_mask) * original_normalized
         img = pil_img.fromarray((output_image * 255).astype(np.uint8))
-        return img        
+        return img
 
 
 def load_image(path) -> pil_img:
@@ -191,12 +190,12 @@ def load_image(path) -> pil_img:
 
 
 def main(args):
-    
     mesh_folder = os.path.join(args.data, 'meshes')
+    pcd_folder = args.pcd_dir
     result_pickle_folder = os.path.join(args.data, 'results')
 
     images = [file for file in os.listdir(args.images) if os.path.splitext(file)[1] in ['.png', '.jpg']]
-
+    pcds=[file for file in os.listdir(args.pcd_dir) if os.path.splitext(file)[1] in ['.obj']]
     os.makedirs(args.output, exist_ok=True)
 
     # visualize each image separately
@@ -215,15 +214,16 @@ def main(args):
         persons_results = os.listdir(os.path.join(result_pickle_folder, image_name))
         img = load_image(os.path.join(args.images, image))
 
-        assert len(persons_meshes) == len(persons_results), f"Not the same amount of persons in meshes and results folder for image {image}"
+        assert len(persons_meshes) == len(
+            persons_results), f"Not the same amount of persons in meshes and results folder for image {image}"
 
         # at the moment, only a single person is supported
-        #person = persons_meshes[0]
+        # person = persons_meshes[0]
         renders_to_combine = []
         for person in persons_meshes:
 
             person_id = os.path.splitext(person)[0]
-            print(os.path.join(result_pickle_folder, image_name, person_id+'.pkl'))
+            print(os.path.join(result_pickle_folder, image_name, person_id + '.pkl'))
             # result = read_pickle_file(os.path.join(result_pickle_folder, image_name, person_id+'.pkl'))
             # print(result)
             # result2=read_pickle_file("000_all.pkl")
@@ -240,7 +240,7 @@ def main(args):
             overlayed = combine_scene_image(scene_rgba, img)
 
             if args.show_results:
-                #overlayed.show()
+                # overlayed.show()
                 plt.imshow(overlayed)
                 plt.gcf().canvas.manager.set_window_title(f"{image_name} - {person_id}")
                 plt.axis('off')
@@ -252,27 +252,32 @@ def main(args):
         if len(renders_to_combine) > 1:
             overall_overlayed = combine_scene_image(renders_to_combine, img)
             if args.show_results:
-                    #overlayed.show()
-                    plt.imshow(overall_overlayed)
-                    plt.gcf().canvas.manager.set_window_title(f"{image_name} - all")
-                    plt.axis('off')
-                    plt.show()
+                # overlayed.show()
+                plt.imshow(overall_overlayed)
+                plt.gcf().canvas.manager.set_window_title(f"{image_name} - all")
+                plt.axis('off')
+                plt.show()
 
             if not args.no_save:
                 overall_overlayed.save(os.path.join(args.output, f"{image_name}_all.png"))
-        
+
         # except Exception as e:
         #     tqdm.write(f'failed at {image_name}')
         #     pass
         # exit(0)
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Visualizes the fitted SMPL meshes on the original images.")
-    parser.add_argument("-d", "--data", type=str, default="colorflip-output", help="Path to the SMPLify-X output folder that contains the meshes and pickle files.")
-    parser.add_argument("-i", "--images", type=str, default="colorflip/images/",help="Path to the folder that contains the input images.")
-    parser.add_argument("-o", "--output", type=str, default="align-output-test",help="Location where the resulting images should be saved at.")
+    parser.add_argument("-d", "--data", type=str, default="colorflip-output",
+                        help="Path to the SMPLify-X output folder that contains the meshes and pickle files.")
+    parser.add_argument("-i", "--images", type=str, default="colorflip/images/",
+                        help="Path to the folder that contains the input images.")
+    parser.add_argument("-o", "--output", type=str, default="align-output-test",
+                        help="Location where the resulting images should be saved at.")
     parser.add_argument("--focal_length", type=float, default=5000, help="Focal length of the camera.")
-    parser.add_argument("--copy_empty", action="store_true", help="Copies input images without persons to the output folder.")
+    parser.add_argument("--copy_empty", action="store_true",
+                        help="Copies input images without persons to the output folder.")
     parser.add_argument('--show_results', action="store_true", help="Show the resulting overlayed images.")
     parser.add_argument('--no_save', action="store_true", help="Do not save the resulting overlayed images.")
     parser.add_argument('-v', '--verbosity', type=int, default=0, help="Verbosity level.")
