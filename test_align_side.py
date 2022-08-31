@@ -109,6 +109,20 @@ def get_scene_render(body_mesh: pyrender.Mesh,
     camera_pose[1, :] = - camera_pose[1, :]
     camera_pose[2, :] = - camera_pose[2, :]
 
+    # camera_rotate = pcd.get_rotation_matrix_from_xyz((0, np.pi*1.0, np.pi*1.0))
+    # camera_translate = np.array([[0, 0, 0]]).T
+    # camera_rotate = pcd.get_rotation_matrix_from_xyz((0, np.pi*-0.7, np.pi*0.9))
+    # camera_translate = np.array([[-3.5, -0.3, 0.8]]).T
+    camera_rotate = pcd.get_rotation_matrix_from_xyz((0, np.pi*-0.9, np.pi*1.0))
+    camera_translate = np.array([[-1.5, -0.15, -0.5]]).T
+    # camera_rotate = pcd.get_rotation_matrix_from_xyz((np.pi*-0.3, np.pi*1.0, np.pi*1.0))
+    # camera_translate = np.array([[1.0,-7.0,-0.2]]).T
+
+    camera_pose = np.hstack([camera_rotate, camera_translate])
+    camera_pose = np.vstack([camera_pose, [0, 0, 0, 1]])
+
+
+
     '''
     1.08137000e+03
     0.
@@ -190,18 +204,20 @@ def load_image(path) -> pil_img:
 
 
 def main(args):
-    mesh_folder = os.path.join(args.data, 'meshes')
-    pcds = [file for file in os.listdir(args.pcd_dir) if os.path.splitext(file)[1] in ['.obj']]
+    mesh_folder = os.path.join(args.mesh_dir, 'meshes')
+    pcds = [file for file in os.listdir(args.pcd_dir) if os.path.splitext(file)[1] in ['.ply']]
     os.makedirs(args.output, exist_ok=True)
 
     # visualize each image separately
     for pcd in tqdm(pcds, desc="Align LeReS and mover Processing"):
         # at the moment, only a single person is supported
         pcd_name = os.path.splitext(pcd)[0]
+        body_mesh_name=pcd_name.replace('-pcd','')
 
-        # pcd_file = o3d.io.read_point_cloud(os.path.join(args.pcd_dir, pcd))
-        pcd_file = o3d.io.read_point_cloud('out0001-pcd.ply')
-        body_mesh = load_mesh("000.obj_cam_CS.obj")
+        pcd_file = o3d.io.read_point_cloud(os.path.join(args.pcd_dir, pcd))
+        # pcd_file = o3d.io.read_point_cloud('out0001-pcd.ply')
+        body_mesh= load_mesh(f"{os.path.join(args.mesh_dir, body_mesh_name)}.obj")
+        # body_mesh = load_mesh("000.obj_cam_CS.obj")
 
         scene_rgba, _ = get_scene_render(
             body_mesh=body_mesh,
@@ -225,9 +241,9 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Visualizes the fitted SMPL meshes on the original images.")
-    parser.add_argument("--mesh_dir", type=str, default="colorflip-output",
+    parser.add_argument("--mesh_dir", type=str, default="../datasets/meshes_cam",
                         help="Path to the SMPLify-X output folder that contains the meshes and pickle files.")
-    parser.add_argument("--pcd_dir", type=str, default="colorflip/images/",
+    parser.add_argument("--pcd_dir", type=str, default="LeReS-output",
                         help="Path to the folder that contains the input images.")
     parser.add_argument("--output", type=str, default="LeReS-mover-align",
                         help="Location where the resulting images should be saved at.")
