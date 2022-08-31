@@ -3,3 +3,4 @@ numpy
 argparse
 matplotlib
 tqdm
+open3d
