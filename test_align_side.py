@@ -14,6 +14,7 @@ from typing import Tuple, Union, List
 from tqdm import tqdm
 import shutil
 import open3d as o3d
+from PIL import Image
 
 try:
     import cPickle as pickle
@@ -99,7 +100,7 @@ def get_scene_render(body_mesh: pyrender.Mesh,
     light_nodes = _create_raymond_lights()
     for node in light_nodes:
         scene.add_node(node)
-    pyrender.Viewer(scene)
+    # pyrender.Viewer(scene)
     # camera_translation[0] *= -1.0
     # camera_pose = np.eye(4)
     # camera_pose[:3, 3] = camera_translation
@@ -147,7 +148,7 @@ def get_scene_render(body_mesh: pyrender.Mesh,
         cx=9.59500000e+02, cy=5.39500000e+02, zfar=10e20
     )
     scene.add(camera, pose=camera_pose)
-    pyrender.Viewer(scene)
+    # pyrender.Viewer(scene)
     light_nodes = _create_raymond_lights()
     for node in light_nodes:
         scene.add_node(node)
@@ -161,8 +162,8 @@ def get_scene_render(body_mesh: pyrender.Mesh,
         point_size=1.0
     )
     color, depth = r.render(scene, flags=pyrender.RenderFlags.RGBA)
-    plt.imshow(color)
-    plt.show()
+    # plt.imshow(color)
+    # plt.show()
     return color, depth
 
 
@@ -232,8 +233,10 @@ def main(args):
             plt.axis('off')
             plt.show()
 
-        # if not args.no_save:
-        #     scene_rgba.save(os.path.join(args.output, f"{pcd_name}.png"))
+        if not args.no_save:
+            # scene_rgba.save(os.path.join(args.output, f"{pcd_name}.png"))
+            im = Image.fromarray(scene_rgba)
+            im.save(os.path.join(args.output, f"{body_mesh_name}.png"))
 
 
 
@@ -245,7 +248,7 @@ if __name__ == '__main__':
                         help="Path to the SMPLify-X output folder that contains the meshes and pickle files.")
     parser.add_argument("--pcd_dir", type=str, default="LeReS-output",
                         help="Path to the folder that contains the input images.")
-    parser.add_argument("--output", type=str, default="LeReS-mover-align",
+    parser.add_argument("--output", type=str, default="LeReS-mover-align-side",
                         help="Location where the resulting images should be saved at.")
     parser.add_argument('--show_results', action="store_true", help="Show the resulting overlayed images.")
     parser.add_argument('--no_save', action="store_true", help="Do not save the resulting overlayed images.")
