@@ -13,6 +13,7 @@ from pyrender import Node, DirectionalLight
 from typing import Tuple, Union, List
 from tqdm import tqdm
 import shutil
+import open3d as o3d
 
 try:
     import cPickle as pickle
@@ -74,6 +75,7 @@ def load_mesh(mesh_location: str) -> pyrender.Mesh:
 
 
 def get_scene_render(body_mesh: pyrender.Mesh,
+                     pcd,
                      image_width: int,
                      image_height: int,
                      ) -> Tuple[np.ndarray, np.ndarray]:
@@ -83,8 +85,6 @@ def get_scene_render(body_mesh: pyrender.Mesh,
                            ambient_light=(0.3, 0.3, 0.3))
     scene.add(body_mesh, 'mesh')
 
-    import open3d as o3d
-    pcd = o3d.io.read_point_cloud('out0001-pcd.ply')
     pcd_translate = np.array([[0, 0, 0]]).T
     # camera_translate=np.array([[0,0,1000]]).T
     pcd_rotate = pcd.get_rotation_matrix_from_xyz((0, 0, 0))
@@ -191,96 +191,48 @@ def load_image(path) -> pil_img:
 
 def main(args):
     mesh_folder = os.path.join(args.data, 'meshes')
-    pcd_folder = args.pcd_dir
-    result_pickle_folder = os.path.join(args.data, 'results')
-
-    images = [file for file in os.listdir(args.images) if os.path.splitext(file)[1] in ['.png', '.jpg']]
-    pcds=[file for file in os.listdir(args.pcd_dir) if os.path.splitext(file)[1] in ['.obj']]
+    pcds = [file for file in os.listdir(args.pcd_dir) if os.path.splitext(file)[1] in ['.obj']]
     os.makedirs(args.output, exist_ok=True)
 
     # visualize each image separately
-    for image in tqdm(images, desc="Image Processing"):
-        # try:
-        image_name = os.path.splitext(image)[0]
-
-        if not os.path.exists(os.path.join(mesh_folder, image_name)):
-            if args.verbosity > 0:
-                print(f"No mesh generated for image {image}")
-            if args.copy_empty:
-                shutil.copy(os.path.join(args.images, image), os.path.join(args.output, image))
-            continue
-
-        persons_meshes = os.listdir(os.path.join(mesh_folder, image_name))
-        persons_results = os.listdir(os.path.join(result_pickle_folder, image_name))
-        img = load_image(os.path.join(args.images, image))
-
-        assert len(persons_meshes) == len(
-            persons_results), f"Not the same amount of persons in meshes and results folder for image {image}"
-
+    for pcd in tqdm(pcds, desc="Align LeReS and mover Processing"):
         # at the moment, only a single person is supported
-        # person = persons_meshes[0]
-        renders_to_combine = []
-        for person in persons_meshes:
+        pcd_name = os.path.splitext(pcd)[0]
 
-            person_id = os.path.splitext(person)[0]
-            print(os.path.join(result_pickle_folder, image_name, person_id + '.pkl'))
-            # result = read_pickle_file(os.path.join(result_pickle_folder, image_name, person_id+'.pkl'))
-            # print(result)
-            # result2=read_pickle_file("000_all.pkl")
-            # print(result2)
-            # body_mesh = load_mesh(os.path.join(mesh_folder, image_name, person))
-            body_mesh = load_mesh("000.obj_cam_CS.obj")
+        # pcd_file = o3d.io.read_point_cloud(os.path.join(args.pcd_dir, pcd))
+        pcd_file = o3d.io.read_point_cloud('out0001-pcd.ply')
+        body_mesh = load_mesh("000.obj_cam_CS.obj")
 
-            scene_rgba, _ = get_scene_render(
-                body_mesh,
-                img.size[0],
-                img.size[1],
-            )
-            renders_to_combine.append(scene_rgba)
-            overlayed = combine_scene_image(scene_rgba, img)
+        scene_rgba, _ = get_scene_render(
+            body_mesh=body_mesh,
+            pcd=pcd_file,
+            image_width=1920,
+            image_height=1080,
+        )
+        if args.show_results:
+            # overlayed.show()
+            plt.imshow(scene_rgba)
+            plt.gcf().canvas.manager.set_window_title(f"{pcd_name}")
+            plt.axis('off')
+            plt.show()
 
-            if args.show_results:
-                # overlayed.show()
-                plt.imshow(overlayed)
-                plt.gcf().canvas.manager.set_window_title(f"{image_name} - {person_id}")
-                plt.axis('off')
-                plt.show()
+        # if not args.no_save:
+        #     scene_rgba.save(os.path.join(args.output, f"{pcd_name}.png"))
 
-            if not args.no_save:
-                overlayed.save(os.path.join(args.output, f"{image_name}_{person_id}.png"))
 
-        if len(renders_to_combine) > 1:
-            overall_overlayed = combine_scene_image(renders_to_combine, img)
-            if args.show_results:
-                # overlayed.show()
-                plt.imshow(overall_overlayed)
-                plt.gcf().canvas.manager.set_window_title(f"{image_name} - all")
-                plt.axis('off')
-                plt.show()
 
-            if not args.no_save:
-                overall_overlayed.save(os.path.join(args.output, f"{image_name}_all.png"))
-
-        # except Exception as e:
-        #     tqdm.write(f'failed at {image_name}')
-        #     pass
-        # exit(0)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Visualizes the fitted SMPL meshes on the original images.")
-    parser.add_argument("-d", "--data", type=str, default="colorflip-output",
+    parser.add_argument("--mesh_dir", type=str, default="colorflip-output",
                         help="Path to the SMPLify-X output folder that contains the meshes and pickle files.")
-    parser.add_argument("-i", "--images", type=str, default="colorflip/images/",
+    parser.add_argument("--pcd_dir", type=str, default="colorflip/images/",
                         help="Path to the folder that contains the input images.")
-    parser.add_argument("-o", "--output", type=str, default="align-output-test",
+    parser.add_argument("--output", type=str, default="LeReS-mover-align",
                         help="Location where the resulting images should be saved at.")
-    parser.add_argument("--focal_length", type=float, default=5000, help="Focal length of the camera.")
-    parser.add_argument("--copy_empty", action="store_true",
-                        help="Copies input images without persons to the output folder.")
     parser.add_argument('--show_results', action="store_true", help="Show the resulting overlayed images.")
     parser.add_argument('--no_save', action="store_true", help="Do not save the resulting overlayed images.")
-    parser.add_argument('-v', '--verbosity', type=int, default=0, help="Verbosity level.")
     args = parser.parse_args()
 
     main(args)
